@@ -1,9 +1,8 @@
-"use client"; // Reason: useChat ek React hook hai, isliye ye client component hona chahiye
-
-// Packages needed (agar pehle install nahi kiye):
-//   npm install ai @ai-sdk/react
-import React, { useEffect, useRef, useState } from "react";
+"use client"
+import { useEffect, useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
+import TypingIndicator from "@/component/Loader";
+import { ShouldShowLoader, getMessageText } from "@/utils/chat-utils";
 
 export default function Home() {
 
@@ -14,6 +13,8 @@ export default function Home() {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const isEmpty = messages.length === 0
+
+  const showLoader = ShouldShowLoader(messages, status)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -38,8 +39,9 @@ export default function Home() {
 
       <input
         onChange={(e) => setInput(e.target.value)}
+        disabled={isBusy}
         value={input}
-        placeholder="Ask about any product ...."
+        placeholder={isBusy ? 'AI is answering....' : 'Ask about any product....'}
         className="flex-1 outline-none bg-transparent"
       />
 
@@ -48,7 +50,7 @@ export default function Home() {
         disabled={status !== 'ready'}
         className="rounded-full bg-black px-4 py-1 text-white disabled:opacity-50"
       >
-        Send
+        {isBusy ? '...' : 'Send'}
       </button>
 
     </form>
@@ -69,18 +71,9 @@ export default function Home() {
 
   return (
     <main className="flex h-screen flex-col items-center">
-      {/* flex-1 + overflow-y-auto: ye hissa bacha hua saara space leta hai
-          aur zyada messages hone pe khud scroll hota hai */}
       <div className="w-full max-w-2xl flex-1 overflow-y-auto px-4 py-6 space-y-4">
         {messages.map((m) => {
           const isUser = m.role === "user";
-
-          // Naye SDK mein message ka text "parts" array mein hota hai,
-          // isliye sirf text wale parts nikaal ke jod rahe hain.
-          const text = m.parts
-            .filter((p) => p.type === "text")
-            .map((p) => (p as { text: string }).text)
-            .join("");
 
           return (
             // justify-end = right side (user), justify-start = left side (bot)
@@ -92,11 +85,13 @@ export default function Home() {
                 className={`max-w-[80%] whitespace-pre-wrap rounded-2xl px-4 py-2 ${isUser ? "bg-black text-white" : "bg-gray-100 text-black"
                   }`}
               >
-                {text}
+                {getMessageText(m)}
               </div>
             </div>
           );
         })}
+
+        {showLoader && <TypingIndicator />}
 
         {
           error && (
